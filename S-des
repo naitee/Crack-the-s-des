@@ -104,24 +104,110 @@ def P4(input):
     p4_output = p4_0 + p4_1 + p4_2 + p4_3 
     return p4_output
 
+def sdes(input_list):
+    ##S-des encryption
+    Cipher_output = ""
+    fill_bin = ""
+    for j in range(len(input_list)-1):
+        pl = ip(input_list[j+1])
+        #Break half
+        Lip_bit = pl[:4]
+        Rip_bit = pl[4:]
+
+        #Rip_bit in e/p
+        f_ep = ep(Rip_bit)
+
+        #ep_xor_key1
+        intep = int(f_ep,2) 
+        intkey1 = int(Key2,2)
+        intxor_out = intep ^ intkey1
+        bixor = bin(intxor_out)
+
+        #break-half
+        p1_xor = bixor[2:10]
+        p2_xor1 = p1_xor.zfill(8)
+        Lip_xor1 = p2_xor1[:4]
+        Rip_xor1 = p2_xor1[4:]
+
+
+        #S-box section
+        s0_out = s0(Lip_xor1)
+        s1_out = s1(Rip_xor1)
+        B_first_P4 = s0_out + s1_out
+
+        #first P4
+        first_P4 = P4(B_first_P4)
+
+        #first_p4_xor
+        int_first_P4 = int(first_P4,2)
+        int_Lip_bit = int(Lip_bit,2)
+        int_first_p4_xor = int_Lip_bit ^ int_first_P4
+        first_p4_xor = bin(int_first_p4_xor)
+
+        #Switching
+        b_left_sw = first_p4_xor[2:6]
+        left_sw = b_left_sw.zfill(4)                
+        sw_output = Rip_bit + left_sw 
+
+
+        #break-half after switching
+        Lsw_bit = sw_output[:4]
+        Rsw_bit = sw_output[4:]
+
+        #Second Expand and permutation
+        Rsw_ep = ep(Rsw_bit)
+
+        #Second xor w/ Key2
+        intep2 = int(Rsw_ep,2) 
+        intkey2 = int(Key1,2)
+        intxor2_out = intep2 ^ intkey2
+        bixor2 = bin(intxor2_out)
+
+        #Break-half afre second xor
+        p1_xor2 = bixor2[2:10]
+        p2_xor2 = p1_xor2.zfill(8)
+        Lip_xor2 = p2_xor2[:4]
+        Rip_xor2 = p2_xor2[4:] 
+
+
+        #S-box section
+        s0_out2 = s0(Lip_xor2)
+        s1_out2 = s1(Rip_xor2)
+        B_second_P4 = s0_out2 + s1_out2
+
+        #Second P4
+        second_P4 = P4(B_second_P4)
+        #second_p4_xor
+        int_second_P4 = int(second_P4,2)
+        int_Lsw_bit = int(Lsw_bit,2)
+        int_second_p4_xor = int_Lsw_bit ^ int_second_P4
+        second_p4_xor = bin(int_second_p4_xor)
+
+        #Break-half afre last xor
+        b_left_ip = second_p4_xor[2:6]
+        left_ip1 = b_left_ip.zfill(4)
+
+        #Combine before inverse initial permutation
+        last_combine = left_ip1 + Rsw_bit
+        #Inverse initial permutation
+        ciphertext = ip(last_combine)
+        INTciphertext = int(ciphertext,2)
+        Biciphertext = bin(INTciphertext)
+        sl_BIcipher = Biciphertext[2:]
+        fill_bin = sl_BIcipher.zfill(8)
+        Cipher_output = Cipher_output + "," + fill_bin
+    return Cipher_output
+
 import numpy as np
 import datetime
 
 
-check = ",0b11001101,0b11000011,0b10111001,0b11110111,0b1101000,0b10111001,0b11110111,0b10110110,0b11110111,0b10110110,0b11001101,0b1101000,0b11110111,0b10110110,0b10111001,0b1101000,0b10110110,0b10110110,0b1100011,0b11110111,0b11001101,0b10110110,0b110,0b11000011,0b1010111,0b111000,0b1101000,0b11000011,0b11110111,0b11110111,0b10110110,0b11001101,0b10110110,0b10110110,0b11001101,0b10111001,0b11001101,0b10111001,0b11001101,0b111000,0b10111001,0b1101000,0b10110110,0b1101000,0b11000011,0b10110110,0b1101000,0b1101000,0b11000011,0b10111001,0b111000,0b1101000,0b1101000,0b10111001,0b110,0b111000,0b110,0b11000011,0b1100011,0b11001101,0b10111001,0b1010111,0b11001101,0b111000,0b1010111,0b10110110,0b1010111,0b10110110,0b1010111,0b1101000,0b11000011,0b1010111,0b10110110,0b10110110,0b10111001,0b1100011,0b11110111"
-sl_check = check[:98]
-rea_check = sl_check.split(",0b")
-for k in range(1,len(rea_check)):
-    if (len(rea_check[k]) != 8 ):
-        rea_check[k] = rea_check[k].zfill(8)
 
 ##Generated key pattern
 for key_number in range(2**10):
     s_Key = bin(key_number)
     sl_s_key = s_Key[2:]
     ready_key = sl_s_key.zfill(10)
-    print ("key",key_number)
-    print ("ready_key",ready_key)
     ########Key1 Generated
     P10_output = P10(ready_key)
     #Break-half 
@@ -133,7 +219,6 @@ for key_number in range(2**10):
     ##Key1
     BKey1 = LLS_1+RLS_1
     Key1 = P8(BKey1)
-
     ########Key2 Generated
     #2Left_Round_Shift
     LLS_2 = Leftshift(Leftshift(LLS_1))
@@ -142,145 +227,55 @@ for key_number in range(2**10):
     BKey2 = LLS_2 + RLS_2
     Key2 = P8(BKey2)
 
-    #print ("key=" , key_number)
-    #print ("s_key=" ,s_Key )
-    #print ("key1=" , Key1)
-    #print ("key2=" , Key2)
-    #print("time=",datetime.datetime.utcnow())
-    #print ("========================")
-
-###############################################################################PLAIN_TEXT
-##Generatee plaintext
-#for gen in range():
-    #strgen = str(gen)
-    #genfill = strgen.zfill(68)
-    #plaintext = "590610626" + str(genfill)
-
+###############################################################################Encrypt
     plaintext = "590610626"
     list_test = ""
     output = ""
-    sl_cipher = ""
 
     ##string to ascii
     for i in range (len(plaintext)):
         ascii_s = bin(ord(plaintext[i]))
-        slice_ascii = "00"+ascii_s[2:]
-        output = output + "," + slice_ascii
+        slice_ascii = ascii_s[2:]
+        sl_bi = slice_ascii.zfill(8)
+        output = output + "," + sl_bi
         output_real = output[1:]
-        list_test = output.split(",")
+        list_test = output_real.split(",")    
+    
 
-        Cipher_output = ""
-        ##S-des encryption
-        for j in range(len(list_test)-1):
-            pl = ip(list_test[j+1])
-            #Break half
-            Lip_bit = pl[:4]
-            Rip_bit = pl[4:]
-
-            #Rip_bit in e/p
-            f_ep = ep(Rip_bit)
-
-            #ep_xor_key1
-            intep = int(f_ep,2) 
-            intkey1 = int(Key1,2)
-            intxor_out = intep ^ intkey1
-            bixor = bin(intxor_out)
-
-            #break-half
-            p1_xor = bixor[2:10]
-            p2_xor1 = p1_xor.zfill(8)
-            Lip_xor1 = p2_xor1[:4]
-            Rip_xor1 = p2_xor1[4:]
-
-
-            #S-box section
-            s0_out = s0(Lip_xor1)
-            s1_out = s1(Rip_xor1)
-            B_first_P4 = s0_out + s1_out
-
-            #first P4
-            first_P4 = P4(B_first_P4)
-
-            #first_p4_xor
-            int_first_P4 = int(first_P4,2)
-            int_Lip_bit = int(Lip_bit,2)
-            int_first_p4_xor = int_Lip_bit ^ int_first_P4
-            first_p4_xor = bin(int_first_p4_xor)
-
-            #Switching
-            b_left_sw = first_p4_xor[2:6]
-            left_sw = b_left_sw.zfill(4)                
-            sw_output = Rip_bit + left_sw 
-
-
-            #break-half after switching
-            Lsw_bit = sw_output[:4]
-            Rsw_bit = sw_output[4:]
-
-            #Second Expand and permutation
-            Rsw_ep = ep(Rsw_bit)
-
-            #Second xor w/ Key2
-            intep2 = int(Rsw_ep,2) 
-            intkey2 = int(Key2,2)
-            intxor2_out = intep2 ^ intkey2
-            bixor2 = bin(intxor2_out)
-
-            #Break-half afre second xor
-            p1_xor2 = bixor2[2:10]
-            p2_xor2 = p1_xor2.zfill(8)
-            Lip_xor2 = p2_xor2[:4]
-            Rip_xor2 = p2_xor2[4:] 
-
-
-            #S-box section
-            s0_out2 = s0(Lip_xor2)
-            s1_out2 = s1(Rip_xor2)
-            B_second_P4 = s0_out2 + s1_out2
-
-            #Second P4
-            second_P4 = P4(B_second_P4)
-            #second_p4_xor
-            int_second_P4 = int(second_P4,2)
-            int_Lsw_bit = int(Lsw_bit,2)
-            int_second_p4_xor = int_Lsw_bit ^ int_second_P4
-            second_p4_xor = bin(int_second_p4_xor)
-
-            #Break-half afre last xor
-            b_left_ip = second_p4_xor[2:6]
-            left_ip1 = b_left_ip.zfill(4)
-
-            #Combine before inverse initial permutation
-            last_combine = left_ip1 + Rsw_bit
-            #Inverse initial permutation
-            ciphertext = ip_re(last_combine)
-            INTciphertext = int(ciphertext,2)
-            Biciphertext = bin(INTciphertext)
-            sl_BIcipher = Biciphertext[2:]
-            fill_bin = sl_BIcipher.zfill(8)
-
-            Cipher_output = Cipher_output + "," + fill_bin
-
-    sl_cipher = Cipher_output.split(",")
-    #print ("*************************************")
-    print ("p=",list_test[1])
-    print ("c=",sl_cipher[1])
-    print ("r=",rea_check[1])
+    check = ",0b11001101,0b11000011,0b10111001,0b11110111,0b1101000,0b10111001,0b11110111,0b10110110,0b11110111,0b10110110,0b11001101,0b1101000,0b11110111,0b10110110,0b10111001,0b1101000,0b10110110,0b10110110,0b1100011,0b11110111,0b11001101,0b10110110,0b110,0b11000011,0b1010111,0b111000,0b1101000,0b11000011,0b11110111,0b11110111,0b10110110,0b11001101,0b10110110,0b10110110,0b11001101,0b10111001,0b11001101,0b10111001,0b11001101,0b111000,0b10111001,0b1101000,0b10110110,0b1101000,0b11000011,0b10110110,0b1101000,0b1101000,0b11000011,0b10111001,0b111000,0b1101000,0b1101000,0b10111001,0b110,0b111000,0b110,0b11000011,0b1100011,0b11001101,0b10111001,0b1010111,0b11001101,0b111000,0b1010111,0b10110110,0b1010111,0b10110110,0b1010111,0b1101000,0b11000011,0b1010111,0b10110110,0b10110110,0b10111001,0b1100011,0b11110111"
+    rea_check = check.split(",0b")
+    combine_rea = ""
+    for k in range(1,len(rea_check)):
+        if (len(rea_check[k]) != 8 ):
+            rea_check[k] = rea_check[k].zfill(8)
+        combine_rea = combine_rea + "," + rea_check[k]
+    ################################decrypt
+    sl_combine = combine_rea.split(",")
+    sl_cipher = ""
+    for i in range (len(sl_combine)-1):   
+        dc_output = sdes(sl_combine)
+    
+    test = ""
+    sl_cipher = dc_output.split(",")
+    for s in range(10):
+        test = test + "," + sl_cipher[s]
+    sl_test = test.split(",")
+    del sl_test[0]
+    del sl_test[0]
+    print ("key",key_number)
+    print ("ready_key",ready_key)
     print ("k1",Key1)
     print ("k2",Key2)
-    print ("========")
-
-    #print ("key",ready_key,key_number)
-    #print ("output_of_ascii",output)
-    #print ("Equal? = ", sl_cipher == sl_check)
-    #print ("*************************************")
-
-
-    ##Check
-    if(sl_cipher == rea_check ):
-        print ("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-        print (s_Key)
-        print (key_number)
-        print (plaintext)
-
-
+    print ("plain",list_test)
+    print ("dc_sl",sl_test)
+    #print (sl_cipher)
+    
+    print ("====================")
+    
+    if (list_test == sl_test):
+        print ("**********************")
+        print ("key_number",key_number)
+        print ("ready_key",ready_key)
+        print ("plain",sl_cipher)
+        print ("**********************")
+        break
